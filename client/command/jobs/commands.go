@@ -53,6 +53,24 @@ func Commands(con *console.SliverClient) []*cobra.Command {
 	flags.BindFlagCompletions(jobsCmd, func(comp *carapace.ActionMap) {
 		(*comp)["kill"] = JobsIDCompleter(con)
 	})
+  // basic TCP 
+tcpCmd := &cobra.Command{
+	Use:   "tcp",
+	Short: "Start a raw TCP listener",
+	Long:  help.GetHelpFor([]string{"tcp"}),
+	Run: func(cmd *cobra.Command, args []string) {
+		TCPListenerCmd(cmd, con, args)
+	},
+	GroupID: consts.NetworkHelpGroup,
+}
+
+flags.Bind("tcp listener", false, tcpCmd, func(f *pflag.FlagSet) {
+	f.StringP("lhost", "L", "", "interface to bind server to")
+	f.Uint32P("lport", "l", 4444, "tcp listen port")
+})
+
+jobsCmd.AddCommand(tcpCmd)
+
 
 	// Mutual TLS
 	mtlsCmd := &cobra.Command{

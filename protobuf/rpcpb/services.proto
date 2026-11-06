@@ -310,6 +310,9 @@ service SliverRPC {
   rpc CloseTunnel(sliverpb.Tunnel) returns (commonpb.Empty);
   rpc TunnelData(stream sliverpb.TunnelData)
       returns (stream sliverpb.TunnelData);
+  // this one for simpletcp
+  
+  rpc StartTCPListener (clientpb.TCPListenerReq) returns (clientpb.ListenerJob);
 
   // *** Events ***
   rpc Events(commonpb.Empty) returns (stream clientpb.Event);

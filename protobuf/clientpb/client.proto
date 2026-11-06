@@ -444,6 +444,7 @@ message KillJob {
   bool Success = 2;
 }
 
+
 // [ Listeners ] ----------------------------------------
 message ListenerJob {
   string ID = 1;
@@ -455,12 +456,17 @@ message ListenerJob {
   HTTPListenerReq HTTPConf = 7;
   MultiplayerListenerReq MultiConf = 8;
   StagerListenerReq TCPConf = 9;
+  TCPListenerReq SimpleTCPConf = 10; //added this line for simple tcp
 }
 
 message MultiplayerListenerReq {
   string Host = 1;
   uint32 Port = 2;
   bool WireGuard = 3;
+}
+message TCPListenerReq {
+  string Host = 1;
+  uint32 Port = 2;
 }
 
 message MTLSListenerReq {
