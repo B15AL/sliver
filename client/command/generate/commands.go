@@ -334,6 +334,7 @@ func coreImplantFlags(name string, cmd *cobra.Command) {
 
 		// C2 channels
 		f.StringP("mtls", "m", "", "mtls connection strings")
+		f.String("tcp" , "" , "raw tcp connection stirng by bishal") //added this
 		f.StringP("wg", "g", "", "wg connection strings")
 		f.StringP("http", "b", "", "http(s) connection strings")
 		f.StringP("dns", "n", "", "dns connection strings")
@@ -343,6 +344,7 @@ func coreImplantFlags(name string, cmd *cobra.Command) {
 		f.Uint32P("key-exchange", "X", DefaultWGKeyExPort, "wg key-exchange port")
 		f.Uint32P("tcp-comms", "T", DefaultWGNPort, "wg c2 comms port")
 		f.Bool("include-mtls", false, "force include mtls transport")
+		f.Bool("include-tcp" , false , "force include tct transport")
 		f.Bool("include-http", false, "force include http transport")
 		f.Bool("include-wg", false, "force include wireguard transport")
 		f.Bool("include-dns", false, "force include dns transport")

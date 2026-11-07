@@ -56,7 +56,7 @@ func Commands(con *console.SliverClient) []*cobra.Command {
   // basic TCP 
 tcpCmd := &cobra.Command{
 	Use:   "tcp",
-	Short: "Start a raw TCP listener",
+	Short: "Start a raw TCP listener  -- by bishal roy",
 	Long:  help.GetHelpFor([]string{"tcp"}),
 	Run: func(cmd *cobra.Command, args []string) {
 		TCPListenerCmd(cmd, con, args)

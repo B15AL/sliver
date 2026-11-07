@@ -189,6 +189,8 @@ func applyGenerateForm(cmd *cobra.Command, result *forms.GenerateFormResult) err
 	switch result.C2Type {
 	case "mtls":
 		return cmd.Flags().Set("mtls", c2Value)
+	case "tcp" :
+		return cmd.Flags().Set("tcp",c2Value)
 	case "wg":
 		return cmd.Flags().Set("wg", c2Value)
 	case "http":
@@ -285,6 +287,17 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverClient) (string, *
 		return "", nil
 	}
 	c2s = append(c2s, mtlsC2...)
+  
+
+ tcpC2F, _ := cmd.Flags().GetString("tcp")
+	tcpC2, err := ParseTCPc2(tcpC2F)
+	if err != nil {
+		con.PrintErrorf("%s\n", err.Error())
+		return "", nil
+	}
+	c2s = append(c2s, tcpC2...)
+
+
 
 	wgC2F, _ := cmd.Flags().GetString("wg")
 	wgC2, err := ParseWGc2(wgC2F)
@@ -337,7 +350,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverClient) (string, *
 		symbolObfuscation = !symbolObfuscation
 	}
 
-	if len(mtlsC2) == 0 && len(wgC2) == 0 && len(httpC2) == 0 && len(dnsC2) == 0 && len(namedPipeC2) == 0 && len(tcpPivotC2) == 0 {
+	if len(mtlsC2) == 0 && len(tcpC2) == 0 && len(wgC2) == 0 && len(httpC2) == 0 && len(dnsC2) == 0 && len(namedPipeC2) == 0 && len(tcpPivotC2) == 0 {
 		con.PrintErrorf("Must specify at least one of --mtls, --wg, --http, --dns, --named-pipe, or --tcp-pivot\n")
 		return "", nil
 	}
@@ -494,6 +507,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverClient) (string, *
 	}
 
 	allProtocols, _ := cmd.Flags().GetBool("all-protocols")
+	includeTCPRaw,_ := cmd.Flags().GetBool("include-tcp")
 	includeMTLS, _ := cmd.Flags().GetBool("include-mtls")
 	includeHTTP, _ := cmd.Flags().GetBool("include-http")
 	includeWG, _ := cmd.Flags().GetBool("include-wg")
@@ -561,7 +575,7 @@ func parseCompileFlags(cmd *cobra.Command, con *console.SliverClient) (string, *
 		IncludeWG:       includeWG,
 		IncludeDNS:      includeDNS,
 		IncludeNamePipe: includeNamedPipe,
-		IncludeTCP:      includeTCP,
+		IncludeTCP:      len(tcpC2)>0 || len(tcpPivotC2)>0 || includeTCPRaw || includeTCP,
 	}
 
 	return name, config
@@ -1216,6 +1230,38 @@ func ParseMTLSc2(args string) ([]*clientpb.ImplantC2, error) {
 		}
 		if uri.Port() == "" {
 			uri.Host = fmt.Sprintf("%s:%d", uri.Hostname(), DefaultMTLSLPort)
+		}
+		c2s = append(c2s, &clientpb.ImplantC2{
+			Priority: uint32(index),
+			URL:      uri.String(),
+		})
+	}
+	return c2s, nil
+}
+
+// ParseTCPc2 - Parse raw TCP connection string arg.
+func ParseTCPc2(args string) ([]*clientpb.ImplantC2, error) {
+	c2s := []*clientpb.ImplantC2{}
+	if args == "" {
+		return c2s, nil
+	}
+	for index, arg := range strings.Split(args, ",") {
+		arg = strings.ToLower(arg)
+		var uri *url.URL
+		var err error
+		if strings.HasPrefix(arg, "tcp://") {
+			uri, err = url.Parse(arg)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			uri, err = url.Parse(fmt.Sprintf("tcp://%s", arg))
+			if err != nil {
+				return nil, err
+			}
+		}
+		if uri.Scheme != "tcp" {
+			return nil, fmt.Errorf("unknown tcp scheme: %s", uri.Scheme)
 		}
 		c2s = append(c2s, &clientpb.ImplantC2{
 			Priority: uint32(index),

