@@ -61,7 +61,7 @@ tcpCmd := &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		TCPListenerCmd(cmd, con, args)
 	},
-	GroupID: consts.NetworkHelpGroup,
+	//GroupID: consts.NetworkHelpGroup,
 }
 
 flags.Bind("tcp listener", false, tcpCmd, func(f *pflag.FlagSet) {

@@ -8,7 +8,7 @@ import (
 	"net"
 	"sync"
 
-	consts "github.com/bishopfox/sliver/client/constants"
+	
 	"github.com/bishopfox/sliver/protobuf/sliverpb"
 	"github.com/bishopfox/sliver/server/core"
 	serverHandlers "github.com/bishopfox/sliver/server/handlers"
@@ -17,16 +17,16 @@ import (
 )
 
 var (
-	tcpLog = log.NamedLogger("c2", "tcp")
+	simpletcpLog = log.NamedLogger("c2", "tcp")
 )
 
 // StartTCPListener - Start a simple raw TCP listener for implants
-func StartTCPListener(bindIface string, port uint16) (net.Listener, error) {
-	tcpLog.Infof("Starting raw TCP listener on %s:%d", bindIface, port)
+func StartSimpleTCPListener(bindIface string, port uint16) (net.Listener, error) {
+	simpletcpLog.Infof("Starting raw TCP listener on %s:%d", bindIface, port)
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", bindIface, port))
 	if err != nil {
-		tcpLog.Errorf("Failed to start TCP listener: %v", err)
+		simpletcpLog.Errorf("Failed to start TCP listener: %v", err)
 		return nil, err
 	}
 
@@ -41,7 +41,7 @@ func acceptTCPConnections(ln net.Listener) {
 			if errType, ok := err.(*net.OpError); ok && errType.Op == "accept" {
 				break // Listener closed
 			}
-			tcpLog.Errorf("Accept failed: %v", err)
+			simpletcpLog.Errorf("Accept failed: %v", err)
 			continue
 		}
 		go handleTCPConnection(conn)
@@ -51,7 +51,7 @@ func acceptTCPConnections(ln net.Listener) {
 func handleTCPConnection(conn net.Conn) {
 	defer conn.Close()
 
-	tcpLog.Infof("Accepted TCP connection from %s", conn.RemoteAddr())
+	simpletcpLog.Infof("Accepted TCP connection from %s", conn.RemoteAddr())
 
 	implantConn := core.NewImplantConnection("tcp", conn.RemoteAddr().String())
 	defer implantConn.Close()
@@ -89,7 +89,7 @@ func handleTCPSession(conn net.Conn, implantConn *core.ImplantConnection) {
 		for {
 			envelope, err := tcpReadEnvelope(conn)
 			if err != nil {
-				tcpLog.Errorf("Read error: %v", err)
+				simpletcpLog.Errorf("Read error: %v", err)
 				return
 			}
 
@@ -127,7 +127,7 @@ func handleTCPSession(conn net.Conn, implantConn *core.ImplantConnection) {
 					continue
 				}
 				if err := tcpWriteEnvelope(conn, envelope); err != nil {
-					tcpLog.Errorf("Write error: %v", err)
+					simpletcpLog.Errorf("Write error: %v", err)
 					return
 				}
 			}

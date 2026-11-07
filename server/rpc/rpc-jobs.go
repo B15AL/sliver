@@ -138,6 +138,43 @@ func (rpc *Server) StartMTLSListener(ctx context.Context, req *clientpb.MTLSList
 
 	return &clientpb.ListenerJob{JobID: uint32(job.ID)}, nil
 }
+func (rpc *Server) StartTCPListener(ctx context.Context, req *clientpb.TCPListenerReq) (*clientpb.ListenerJob, error) {
+	host := req.Host
+	port := uint16(req.Port)
+	if port == 0 {
+		port = 4444
+	}
+
+	ln, err := c2.StartSimpleTCPListener(host, port)
+	if err != nil {
+		return nil, err
+	}
+
+	job := &core.Job{
+		ID:          core.NextJobID(),
+		Name:        "tcp",
+		Description: fmt.Sprintf("TCP listener on %s:%d", host, port),
+		Protocol:    "tcp",
+		Port:        port,
+		JobCtrl:     make(chan bool),
+	}
+
+	go func() {
+		<-job.JobCtrl
+		ln.Close()
+	}()
+
+	core.Jobs.Add(job)
+
+	return &clientpb.ListenerJob{
+		JobID: uint32(job.ID),
+		Type:  "tcp",
+		SimpleTCPConf: &clientpb.TCPListenerReq{
+			Host: host,
+			Port: uint32(port),
+		},
+	}, nil
+}
 
 // StartWGListener - Start a Wireguard listener
 func (rpc *Server) StartWGListener(ctx context.Context, req *clientpb.WGListenerReq) (*clientpb.ListenerJob, error) {
